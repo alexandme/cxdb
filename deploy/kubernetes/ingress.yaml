@@ -1,0 +1,76 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: cxdb
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+  annotations:
+    # TLS with cert-manager (recommended)
+    # Install cert-manager: https://cert-manager.io/docs/installation/
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+
+    # NGINX ingress controller settings
+    # Adjust or remove if using a different ingress controller
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+
+    # Increase timeouts for long-running requests
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+
+    # Optional: Rate limiting
+    # nginx.ingress.kubernetes.io/limit-rps: "100"
+spec:
+  # Ingress class - update based on your cluster
+  # Examples: nginx, traefik, alb, gce
+  ingressClassName: nginx
+
+  tls:
+  - hosts:
+    - cxdb.example.com
+    secretName: cxdb-tls  # cert-manager will create this
+
+  rules:
+  - host: cxdb.example.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: cxdb-gateway
+            port:
+              number: 80
+---
+# Optional: Separate ingress for binary protocol (TLS passthrough)
+# Uncomment if you need external access to the binary protocol
+#
+# apiVersion: networking.k8s.io/v1
+# kind: Ingress
+# metadata:
+#   name: cxdb-binary
+#   namespace: cxdb
+#   labels:
+#     app.kubernetes.io/name: cxdb
+#   annotations:
+#     cert-manager.io/cluster-issuer: letsencrypt-prod
+#     nginx.ingress.kubernetes.io/ssl-passthrough: "true"
+#     nginx.ingress.kubernetes.io/backend-protocol: "TCP"
+# spec:
+#   ingressClassName: nginx
+#   tls:
+#   - hosts:
+#     - cxdb-bin.example.com
+#     secretName: cxdb-binary-tls
+#   rules:
+#   - host: cxdb-bin.example.com
+#     http:
+#       paths:
+#       - path: /
+#         pathType: Prefix
+#         backend:
+#           service:
+#             name: cxdb-server
+#             port:
+#               number: 9009

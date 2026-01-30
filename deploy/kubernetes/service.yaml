@@ -1,0 +1,46 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: cxdb-server
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: server
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: server
+  ports:
+  - name: binary
+    port: 9009
+    targetPort: 9009
+    protocol: TCP
+  - name: http
+    port: 9010
+    targetPort: 9010
+    protocol: TCP
+  - name: metrics
+    port: 9011
+    targetPort: 9011
+    protocol: TCP
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: cxdb-gateway
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: gateway
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: gateway
+  ports:
+  - name: http
+    port: 80
+    targetPort: 8080
+    protocol: TCP
+  sessionAffinity: None

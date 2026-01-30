@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cxdb-config
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: server
+data:
+  # Server bind addresses
+  CXDB_BIND: "0.0.0.0:9009"
+  CXDB_HTTP_BIND: "0.0.0.0:9010"
+
+  # Logging
+  CXDB_LOG_LEVEL: "info"
+  CXDB_LOG_FORMAT: "json"
+
+  # Metrics (optional - set to "true" to enable Prometheus scraping)
+  CXDB_ENABLE_METRICS: "false"
+
+  # Storage tuning
+  CXDB_MAX_BLOB_SIZE: "10485760"  # 10MB
+  CXDB_COMPRESSION_LEVEL: "3"     # Zstd level 1-22
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cxdb-gateway-config
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: gateway
+data:
+  PORT: "8080"
+  CXDB_BACKEND_URL: "http://cxdb-server:9010"
+
+  # Update these for your deployment
+  PUBLIC_BASE_URL: "https://cxdb.example.com"
+  GOOGLE_ALLOWED_DOMAIN: "example.com"
+
+  # CSP script-src origins for custom renderers
+  ALLOWED_RENDERER_ORIGINS: "https://esm.sh,https://cdn.jsdelivr.net,https://unpkg.com"

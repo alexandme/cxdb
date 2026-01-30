@@ -1,0 +1,174 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: cxdb-server
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: server
+spec:
+  serviceName: cxdb-server
+  replicas: 1  # Single replica for v0.1.0 (single-process architecture)
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cxdb
+      app.kubernetes.io/component: server
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cxdb
+        app.kubernetes.io/component: server
+      annotations:
+        prometheus.io/scrape: "false"  # Set to "true" if CXDB_ENABLE_METRICS=true
+        prometheus.io/port: "9011"
+        prometheus.io/path: "/metrics"
+    spec:
+      containers:
+      - name: cxdb
+        # Update this with your registry and tag
+        # Example: your-registry.io/cxdb:v0.1.0
+        image: cxdb/cxdb:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: binary
+          containerPort: 9009
+          protocol: TCP
+        - name: http
+          containerPort: 9010
+          protocol: TCP
+        - name: metrics
+          containerPort: 9011
+          protocol: TCP
+        env:
+        - name: CXDB_DATA_DIR
+          value: /data
+        envFrom:
+        - configMapRef:
+            name: cxdb-config
+        volumeMounts:
+        - name: data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 500m
+            memory: 512Mi
+          limits:
+            cpu: 2000m
+            memory: 2Gi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 10
+          periodSeconds: 30
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65532
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        fsGroup: 65532
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+      labels:
+        app.kubernetes.io/name: cxdb
+        app.kubernetes.io/component: server
+    spec:
+      accessModes:
+      - ReadWriteOnce
+      resources:
+        requests:
+          storage: 10Gi
+      # Update this with your storage class
+      # Examples: standard, gp2, fast-ssd, local-path
+      # storageClassName: standard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cxdb-gateway
+  namespace: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: 2  # Can scale horizontally
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: cxdb
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: cxdb
+        app.kubernetes.io/component: gateway
+    spec:
+      containers:
+      - name: gateway
+        # Update this with your registry and tag
+        # Example: your-registry.io/cxdb-gateway:v0.1.0
+        image: cxdb/gateway:latest
+        imagePullPolicy: IfNotPresent
+        ports:
+        - name: http
+          containerPort: 8080
+          protocol: TCP
+        envFrom:
+        - configMapRef:
+            name: cxdb-gateway-config
+        - secretRef:
+            name: cxdb-secrets
+        env:
+        - name: DATABASE_PATH
+          value: /data/sessions.db
+        volumeMounts:
+        - name: session-data
+          mountPath: /data
+        resources:
+          requests:
+            cpu: 100m
+            memory: 128Mi
+          limits:
+            cpu: 500m
+            memory: 256Mi
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 5
+          periodSeconds: 15
+          timeoutSeconds: 3
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: http
+          initialDelaySeconds: 3
+          periodSeconds: 10
+          timeoutSeconds: 3
+          failureThreshold: 3
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 65532
+          capabilities:
+            drop:
+            - ALL
+      securityContext:
+        fsGroup: 65532
+      volumes:
+      - name: session-data
+        emptyDir: {}  # Sessions are ephemeral; OK to lose on restart

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: cxdb
+  labels:
+    app.kubernetes.io/name: cxdb
+    app.kubernetes.io/part-of: cxdb
