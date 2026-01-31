@@ -69,7 +69,6 @@ pub struct Provenance {
     pub captured_at: i64,
 }
 
-
 pub static DefaultEnvAllowlist: &[&str] = &[
     "K8S_NAMESPACE",
     "K8S_POD_NAME",

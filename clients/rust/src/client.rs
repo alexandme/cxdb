@@ -309,9 +309,7 @@ fn connect_tcp(addr: &str, timeout: Duration) -> Result<TcpStream> {
 
     Err(last_err
         .map(Error::Io)
-        .unwrap_or(Error::Io(std::io::Error::other(
-            "no addresses resolved",
-        ))))
+        .unwrap_or(Error::Io(std::io::Error::other("no addresses resolved"))))
 }
 
 fn default_tls_config() -> Result<ClientConfig> {
