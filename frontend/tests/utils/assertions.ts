@@ -107,12 +107,15 @@ export async function expectDebuggerError(page: Page, errorText?: string): Promi
  * This first refreshes the page to load the latest contexts.
  */
 export async function addContext(page: Page, contextId: string | number): Promise<void> {
-  // Reload the page to ensure the context list is fresh
-  await page.reload({ waitUntil: 'networkidle' });
+  // Reload the page to ensure the context list is fresh.
+  // Use 'domcontentloaded' instead of 'networkidle' because SSE connections
+  // (EventSource to /v1/events) keep the network active, preventing networkidle.
+  await page.reload({ waitUntil: 'domcontentloaded' });
 
-  // Wait for the context to appear in the list
+  // Wait for the context to appear in the list.
+  // This polls until the element is visible, handling async React state updates.
   const contextItem = page.locator(`[data-context-id="${contextId}"]`);
-  await expect(contextItem).toBeVisible({ timeout: 10000 });
+  await expect(contextItem).toBeVisible({ timeout: 30000 });
 
   // Click on the context to open it
   await contextItem.click();
