@@ -91,9 +91,17 @@ fn data_persists_across_reopen() {
     // Reopen the same directory — data should still be there.
     let mut store = Store::open(dir.path()).expect("reopen store");
     let contexts = store.list_recent_contexts(100);
-    assert!(!contexts.is_empty(), "expected at least one context after reopen");
-    let last = store.get_last(context_id, 10, true).expect("get last after reopen");
+    assert!(
+        !contexts.is_empty(),
+        "expected at least one context after reopen"
+    );
+    let last = store
+        .get_last(context_id, 10, true)
+        .expect("get last after reopen");
     assert_eq!(last.len(), 1, "expected one turn after reopen");
     assert_eq!(last[0].record.turn_id, turn_id);
-    assert!(store.blob_store.contains(hash.as_bytes()), "blob should persist after reopen");
+    assert!(
+        store.blob_store.contains(hash.as_bytes()),
+        "blob should persist after reopen"
+    );
 }
