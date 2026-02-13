@@ -163,3 +163,6 @@ frontend/test-results/
 # TypeScript build info
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Embedding model caches
+.fastembed_cache/
