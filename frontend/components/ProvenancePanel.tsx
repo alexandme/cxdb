@@ -23,6 +23,8 @@ interface ProvenancePanelProps {
   contextId: string;
   /** Pre-loaded provenance (from context list). */
   provenance?: Provenance | null;
+  /** Pre-loaded custom metadata (from context list). */
+  custom?: Record<string, string> | null;
   /** Callback when a linked context is clicked. */
   onContextClick?: (contextId: string) => void;
   className?: string;
@@ -136,16 +138,19 @@ function ContextLink({
 export function ProvenancePanel({
   contextId,
   provenance: initialProvenance,
+  custom: initialCustom,
   onContextClick,
   className,
 }: ProvenancePanelProps) {
   const [provenance, setProvenance] = useState<Provenance | null | undefined>(initialProvenance);
+  const [custom, setCustom] = useState<Record<string, string> | null | undefined>(initialCustom);
   const [loading, setLoading] = useState(!initialProvenance);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (initialProvenance !== undefined) {
       setProvenance(initialProvenance);
+      setCustom(initialCustom);
       setLoading(false);
       return;
     }
@@ -156,13 +161,14 @@ export function ProvenancePanel({
     fetchProvenance(contextId)
       .then((response) => {
         setProvenance(response.provenance);
+        setCustom(response.custom ?? null);
         setLoading(false);
       })
       .catch((err) => {
         setError(err.message || 'Failed to load provenance');
         setLoading(false);
       });
-  }, [contextId, initialProvenance]);
+  }, [contextId, initialProvenance, initialCustom]);
 
   if (loading) {
     return (
@@ -230,6 +236,40 @@ export function ProvenancePanel({
               value={spawnStyle.label}
               icon={spawnStyle.icon}
               iconColor={spawnStyle.color}
+            />
+          )}
+        </ProvenanceSection>
+      )}
+
+      {/* Dispatch Context (custom metadata from continuations/subagents) */}
+      {custom && Object.keys(custom).length > 0 && (
+        <ProvenanceSection title="Dispatch Context">
+          {custom.fork_reason && (
+            <ProvenanceField
+              label="Fork reason"
+              value={
+                custom.fork_reason === 'session_continue' ? 'Continuation' :
+                custom.fork_reason === 'subagent' ? 'Subagent' :
+                custom.fork_reason
+              }
+              icon={custom.fork_reason === 'session_continue' ? '\u2192' : '\uD83E\uDD16'}
+              iconColor={custom.fork_reason === 'session_continue' ? 'text-blue-400' : 'text-amber-400'}
+            />
+          )}
+          {custom.fork_turn_id && (
+            <ProvenanceField
+              label="Fork turn"
+              value={custom.fork_turn_id}
+              mono
+              copyable
+            />
+          )}
+          {custom.parent_session_id && (
+            <ProvenanceField
+              label="Parent session"
+              value={custom.parent_session_id}
+              mono
+              copyable
             />
           )}
         </ProvenanceSection>
