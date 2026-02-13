@@ -142,26 +142,47 @@ impl Store {
         metadata
     }
 
-    /// Load context metadata from the first turn of a context.
+    /// Load context metadata from the context's turns.
+    ///
+    /// For forked contexts, the depth-0 turn is inherited from the parent and
+    /// carries the parent's metadata. The forked context's own metadata lives
+    /// in its first directly-appended turn (depth > fork point). We walk
+    /// backward from head and return the highest-depth metadata found, which
+    /// for forked contexts is the correct one, and for non-forked contexts is
+    /// the only one (at depth 0).
     fn load_context_metadata(&mut self, context_id: u64) -> Option<ContextMetadata> {
-        // Get the first turn (depth=0) for this context
-        let first_turn = self.turn_store.get_first_turn(context_id).ok()?;
-        let payload = self.blob_store.get(&first_turn.payload_hash).ok()?;
-        extract_context_metadata(&payload)
+        let head = self.turn_store.get_head(context_id).ok()?;
+        let mut current = head.head_turn_id;
+        while current != 0 {
+            let rec = self.turn_store.get_turn(current).ok()?;
+            if let Ok(payload) = self.blob_store.get(&rec.payload_hash) {
+                if let Some(metadata) = extract_context_metadata(&payload) {
+                    return Some(metadata);
+                }
+            }
+            current = rec.parent_turn_id;
+        }
+        None
     }
 
-    /// Update the metadata cache when a new first turn is appended.
-    /// Returns the extracted metadata if this is the first turn (depth=0).
+    /// Update the metadata cache when a turn with context_metadata is appended.
+    ///
+    /// Returns extracted metadata in two cases:
+    /// - depth == 0: first turn of a new (non-forked) context
+    /// - context not yet indexed: first turn appended to a forked context
     fn maybe_cache_metadata(
         &mut self,
         context_id: u64,
         depth: u32,
         payload: &[u8],
     ) -> Option<ContextMetadata> {
-        if depth == 0 {
+        let is_first_indexed = !self.secondary_indexes.all_contexts().contains(&context_id);
+        if depth == 0 || is_first_indexed {
             let metadata = extract_context_metadata(payload);
-            self.context_metadata_cache
-                .insert(context_id, metadata.clone());
+            if metadata.is_some() || depth == 0 {
+                self.context_metadata_cache
+                    .insert(context_id, metadata.clone());
+            }
             metadata
         } else {
             None
@@ -233,11 +254,12 @@ impl Store {
             uncompressed_len,
         )?;
 
-        // Cache metadata if this is the first turn, and return it for event publishing
+        // Cache metadata and update secondary indexes.
+        // This triggers for depth==0 (new context) or first append to a forked context.
+        let is_first_indexed = !self.secondary_indexes.all_contexts().contains(&context_id);
         let metadata = self.maybe_cache_metadata(context_id, record.depth, &raw_bytes);
 
-        // Update secondary indexes if this is the first turn (depth=0)
-        if record.depth == 0 {
+        if record.depth == 0 || is_first_indexed {
             let head = self.turn_store.get_head(context_id)?;
             self.secondary_indexes.add_context(
                 context_id,
