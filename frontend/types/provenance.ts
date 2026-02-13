@@ -149,6 +149,8 @@ export const SPAWN_REASON_STYLES: Record<string, { icon: string; color: string; 
   quest: { icon: '🔮', color: 'text-purple-400', label: 'Quest' },
   delegation: { icon: '→', color: 'text-blue-400', label: 'Delegation' },
   sub_agent: { icon: '🤖', color: 'text-amber-400', label: 'Sub-agent' },
+  session_continue: { icon: '→', color: 'text-blue-400', label: 'Continuation' },
+  subagent: { icon: '🤖', color: 'text-amber-400', label: 'Subagent' },
 };
 
 export const DEFAULT_SPAWN_REASON_STYLE = { icon: '•', color: 'text-slate-500', label: 'Created' };
