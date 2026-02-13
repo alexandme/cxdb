@@ -12,13 +12,14 @@ import { MessageRenderer, isAgentMessage, extractMessageText } from './MessageRe
 import { QuestEventRenderer, QuestSnapshotRenderer, isQuestEvent, isQuestSnapshot } from './QuestRenderer';
 import { FallbackRenderer } from './FallbackRenderer';
 import { ProvenancePanel } from './ProvenancePanel';
+import { LineageTree } from './LineageTree';
 import { DynamicRenderer } from './DynamicRenderer';
 import { useRendererManifest } from '@/lib/use-renderer';
 import { getItemTypeLabel, getItemTypeColors } from '@/types/conversation';
 import type { ConversationItem, ItemType } from '@/types/conversation';
 
 // View tabs for the right panel
-type DetailView = 'turn' | 'provenance';
+type DetailView = 'turn' | 'provenance' | 'lineage';
 
 // Detect turn type from declared_type or data
 type TurnKind = 'user' | 'assistant' | 'tool_call' | 'tool_result' | 'system' | 'quest_event' | 'quest_snapshot' | 'unknown';
@@ -997,6 +998,17 @@ export function ContextDebugger({ contextId, isOpen, onClose, lastEvent, initial
                   >
                     Provenance
                   </button>
+                  <button
+                    onClick={() => setDetailView('lineage')}
+                    className={cn(
+                      'px-4 py-2 text-xs uppercase tracking-wide transition-colors',
+                      detailView === 'lineage'
+                        ? 'text-theme-accent border-b-2 border-theme-accent bg-theme-accent-muted'
+                        : 'text-theme-text-dim hover:text-theme-text-muted'
+                    )}
+                  >
+                    Lineage
+                  </button>
                   <div className="flex-1" />
                   {detailView === 'turn' && (
                     <button
@@ -1084,6 +1096,20 @@ export function ContextDebugger({ contextId, isOpen, onClose, lastEvent, initial
                       className="divide-y divide-theme-border-dim/60"
                       onContextClick={(linkedContextId) => {
                         // Navigate to the linked context via SPA routing
+                        if (onNavigateToContext) {
+                          onNavigateToContext(linkedContextId);
+                        }
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Content area - Lineage view */}
+                {detailView === 'lineage' && (
+                  <div className="flex-1 overflow-y-auto">
+                    <LineageTree
+                      contextId={contextId}
+                      onContextClick={(linkedContextId) => {
                         if (onNavigateToContext) {
                           onNavigateToContext(linkedContextId);
                         }
