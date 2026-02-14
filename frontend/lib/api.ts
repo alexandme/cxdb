@@ -378,6 +378,7 @@ export async function fetchFsFile(
 export interface ProvenanceResponse {
   context_id: string;
   provenance: Provenance | null;
+  custom?: Record<string, string>;
 }
 
 /**

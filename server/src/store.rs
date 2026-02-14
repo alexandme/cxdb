@@ -74,6 +74,7 @@ pub struct ContextMetadata {
     pub client_tag: Option<String>,
     pub title: Option<String>,
     pub labels: Option<Vec<String>>,
+    pub custom: Option<HashMap<String, String>>,
     pub provenance: Option<Provenance>,
 }
 
@@ -672,6 +673,22 @@ fn extract_context_metadata(payload: &[u8]) -> Option<ContextMetadata> {
                     }
                 }
             }
+            4 => {
+                // custom key-value metadata
+                if let Value::Map(custom_map) = v {
+                    let mut custom = HashMap::new();
+                    for (ck, cv) in custom_map.iter() {
+                        if let (Value::String(key), Value::String(val)) = (ck, cv) {
+                            if let (Some(k), Some(v)) = (key.as_str(), val.as_str()) {
+                                custom.insert(k.to_string(), v.to_string());
+                            }
+                        }
+                    }
+                    if !custom.is_empty() {
+                        metadata.custom = Some(custom);
+                    }
+                }
+            }
             10 => {
                 // provenance
                 if let Value::Map(prov_map) = v {
@@ -686,6 +703,7 @@ fn extract_context_metadata(payload: &[u8]) -> Option<ContextMetadata> {
     if metadata.client_tag.is_some()
         || metadata.title.is_some()
         || metadata.labels.is_some()
+        || metadata.custom.is_some()
         || metadata.provenance.is_some()
     {
         Some(metadata)

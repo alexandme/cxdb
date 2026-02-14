@@ -18,6 +18,7 @@ fn create_test_indexes() -> SecondaryIndexes {
         client_tag: Some("amplifier".to_string()),
         title: Some("Test context 1".to_string()),
         labels: Some(vec![]),
+        custom: None,
         provenance: Some(Provenance {
             on_behalf_of: Some("jay".to_string()),
             service_name: Some("dotrunner".to_string()),
@@ -31,6 +32,7 @@ fn create_test_indexes() -> SecondaryIndexes {
         client_tag: Some("amplifier".to_string()),
         title: Some("Test context 2".to_string()),
         labels: Some(vec![]),
+        custom: None,
         provenance: Some(Provenance {
             on_behalf_of: Some("alex".to_string()),
             service_name: Some("gen".to_string()),
@@ -44,6 +46,7 @@ fn create_test_indexes() -> SecondaryIndexes {
         client_tag: Some("test".to_string()),
         title: Some("Test context 3".to_string()),
         labels: Some(vec![]),
+        custom: None,
         provenance: Some(Provenance {
             on_behalf_of: Some("jay".to_string()),
             service_name: Some("dotrunner".to_string()),
@@ -57,6 +60,7 @@ fn create_test_indexes() -> SecondaryIndexes {
         client_tag: Some("core".to_string()),
         title: Some("Test context 4".to_string()),
         labels: Some(vec![]),
+        custom: None,
         provenance: Some(Provenance {
             on_behalf_of: Some("sam".to_string()),
             service_name: Some("generator".to_string()),
@@ -70,6 +74,7 @@ fn create_test_indexes() -> SecondaryIndexes {
         client_tag: Some("amplifier-core".to_string()),
         title: Some("Test context 5".to_string()),
         labels: Some(vec![]),
+        custom: None,
         provenance: Some(Provenance {
             on_behalf_of: Some("jay".to_string()),
             service_name: Some("dot-test".to_string()),

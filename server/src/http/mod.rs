@@ -615,22 +615,26 @@ fn handle_request(
                 let session_peer_addr = session.as_ref().and_then(|s| s.peer_addr.clone());
 
                 let resp = if let Some(ref meta) = metadata {
+                    let mut resp_obj = json!({
+                        "context_id": context_id.to_string(),
+                    });
                     if let Some(ref prov) = meta.provenance {
                         // Inject server-side client_address if not present
                         let mut prov_with_server_info = prov.clone();
                         if prov_with_server_info.client_address.is_none() {
                             prov_with_server_info.client_address = session_peer_addr;
                         }
-                        json!({
-                            "context_id": context_id.to_string(),
-                            "provenance": prov_with_server_info,
-                        })
+                        resp_obj["provenance"] = serde_json::to_value(&prov_with_server_info)
+                            .unwrap_or(JsonValue::Null);
                     } else {
-                        json!({
-                            "context_id": context_id.to_string(),
-                            "provenance": null,
-                        })
+                        resp_obj["provenance"] = JsonValue::Null;
                     }
+                    if let Some(ref custom) = meta.custom {
+                        if let Ok(custom_json) = serde_json::to_value(custom) {
+                            resp_obj["custom"] = custom_json;
+                        }
+                    }
+                    resp_obj
                 } else {
                     json!({
                         "context_id": context_id.to_string(),
@@ -1358,6 +1362,11 @@ fn context_to_json(
                 }
                 if let Ok(prov_json) = serde_json::to_value(&prov_with_server_info) {
                     obj["provenance"] = prov_json;
+                }
+            }
+            if let Some(ref custom) = metadata.custom {
+                if let Ok(custom_json) = serde_json::to_value(custom) {
+                    obj["custom"] = custom_json;
                 }
             }
         }
