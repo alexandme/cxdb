@@ -99,6 +99,8 @@ export interface ContextEntry {
   // Context metadata (from first turn)
   title?: string;
   labels?: string[];
+  // Custom metadata (dispatch context for subagents/continuations)
+  custom?: Record<string, string>;
   // Provenance (origin story)
   provenance?: import('./provenance').Provenance;
   // Server-provided lineage summary (optional, include_lineage=1)
