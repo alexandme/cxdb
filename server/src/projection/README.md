@@ -38,7 +38,7 @@ use projection::{project_turn, ProjectionOptions};
 let options = ProjectionOptions {
     include_unknown: false,
     bytes_render: BytesRender::Base64,
-    u64_format: U64Format::String,
+    u64_format: U64Format::Number,
     enum_render: EnumRender::Label,
     time_render: TimeRender::Iso,
 };

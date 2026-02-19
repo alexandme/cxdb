@@ -150,18 +150,23 @@ impl Store {
         extract_context_metadata(&payload)
     }
 
-    /// Update the metadata cache when a new first turn is appended.
-    /// Returns the extracted metadata if this is the first turn (depth=0).
+    /// Update the metadata cache when the first turn for a context is appended.
+    /// Returns the extracted metadata if this is the first append to this context.
+    /// Works for both new contexts (depth=0) and forked contexts (depth>0).
     fn maybe_cache_metadata(
         &mut self,
         context_id: u64,
-        depth: u32,
+        _depth: u32,
         payload: &[u8],
     ) -> Option<ContextMetadata> {
-        if depth == 0 {
+        // Only extract once: on the first append to this context.
+        // The cache starts empty, so the first append always triggers extraction.
+        // For new contexts this is depth=0; for forked contexts this is depth=N+1.
+        if let std::collections::hash_map::Entry::Vacant(e) =
+            self.context_metadata_cache.entry(context_id)
+        {
             let metadata = extract_context_metadata(payload);
-            self.context_metadata_cache
-                .insert(context_id, metadata.clone());
+            e.insert(metadata.clone());
             metadata
         } else {
             None
@@ -236,8 +241,8 @@ impl Store {
         // Cache metadata if this is the first turn, and return it for event publishing
         let metadata = self.maybe_cache_metadata(context_id, record.depth, &raw_bytes);
 
-        // Update secondary indexes if this is the first turn (depth=0)
-        if record.depth == 0 {
+        // Update secondary indexes if metadata was just extracted (first turn for this context)
+        if metadata.is_some() {
             let head = self.turn_store.get_head(context_id)?;
             self.secondary_indexes.add_context(
                 context_id,

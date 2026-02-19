@@ -11,9 +11,9 @@
  * Legacy types (assistant, tool_call, tool_result) are kept for backward compatibility.
  */
 
-// Type ID constants matching the Go package
-export const TYPE_ID_CONVERSATION_ITEM = 'cxdb:ConversationItem';
-export const TYPE_VERSION_CONVERSATION_ITEM = 2;
+// Type ID constants matching the registry bundle
+export const TYPE_ID_CONVERSATION_ITEM = 'cxdb.ConversationItem';
+export const TYPE_VERSION_CONVERSATION_ITEM = 3;
 
 // =============================================================================
 // Enums

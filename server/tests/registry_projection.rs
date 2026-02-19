@@ -333,3 +333,182 @@ fn get_all_renderers() {
     assert_eq!(c_renderer.esm_url, "builtin:RendererC");
     assert_eq!(c_renderer.component.as_ref().unwrap(), "CWrapper");
 }
+
+#[test]
+fn map_with_ref_recursively_projects() {
+    // Regression test: a bundle schema may use `"type": "map"` with a separate
+    // `"ref"` attribute for nested types.  The projection engine must treat
+    // this the same as `"type": "ref"` and recursively decode nested fields
+    // to named keys.
+    let dir = tempdir().expect("tempdir");
+    let mut registry = Registry::open(dir.path()).expect("open registry");
+
+    let bundle = r#"
+    {
+      "registry_version": 1,
+      "bundle_id": "map-ref-test",
+      "types": {
+        "test:Outer": {
+          "versions": {
+            "1": {
+              "fields": {
+                "1": { "name": "item_type", "type": "string" },
+                "13": { "name": "handoff", "type": "map", "ref": "test:Inner", "optional": true }
+              }
+            }
+          }
+        },
+        "test:Inner": {
+          "versions": {
+            "1": {
+              "fields": {
+                "1": { "name": "from_agent", "type": "string" },
+                "2": { "name": "to_agent", "type": "string" },
+                "5": { "name": "reason", "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "enums": {}
+    }
+    "#;
+
+    registry
+        .put_bundle("map-ref-test", bundle.as_bytes())
+        .expect("put bundle");
+    let desc = registry
+        .get_type_version("test:Outer", 1)
+        .expect("descriptor");
+
+    // Build msgpack: Outer { item_type: "handoff", handoff: Inner { from_agent: "root", to_agent: "explorer", reason: "delegation" } }
+    let inner_map = vec![
+        (Value::Integer(1.into()), Value::String("root".into())),
+        (Value::Integer(2.into()), Value::String("explorer".into())),
+        (Value::Integer(5.into()), Value::String("delegation".into())),
+    ];
+    let root_map = vec![
+        (Value::Integer(1.into()), Value::String("handoff".into())),
+        (Value::Integer(13.into()), Value::Map(inner_map)),
+    ];
+    let value = Value::Map(root_map);
+
+    let mut buf = Vec::new();
+    rmpv::encode::write_value(&mut buf, &value).expect("encode msgpack");
+
+    let projection = project_msgpack(&buf, desc, &registry, &default_options()).expect("project");
+    let data = projection.data.as_object().expect("data object");
+
+    // Top-level field decoded
+    assert_eq!(data.get("item_type").unwrap().as_str().unwrap(), "handoff");
+
+    // Nested map+ref field MUST have named keys, not numeric string keys
+    let handoff = data
+        .get("handoff")
+        .expect("handoff field present")
+        .as_object()
+        .expect("handoff is object");
+    assert_eq!(handoff.get("from_agent").unwrap().as_str().unwrap(), "root");
+    assert_eq!(
+        handoff.get("to_agent").unwrap().as_str().unwrap(),
+        "explorer"
+    );
+    assert_eq!(
+        handoff.get("reason").unwrap().as_str().unwrap(),
+        "delegation"
+    );
+
+    // Verify numeric keys are NOT present (regression guard)
+    assert!(
+        handoff.get("1").is_none(),
+        "numeric key '1' should not appear in typed view"
+    );
+    assert!(
+        handoff.get("2").is_none(),
+        "numeric key '2' should not appear in typed view"
+    );
+}
+
+#[test]
+fn array_shorthand_ref_recursively_projects() {
+    // Regression test: a bundle schema may use `"items": { "ref": "T" }`
+    // (without `"type": "ref"`) for array items.  The registry parser must
+    // treat this shorthand the same as the long form `{"type":"ref","ref":"T"}`.
+    let dir = tempdir().expect("tempdir");
+    let mut registry = Registry::open(dir.path()).expect("open registry");
+
+    let bundle = r#"
+    {
+      "registry_version": 1,
+      "bundle_id": "shorthand-ref-test",
+      "types": {
+        "test:Parent": {
+          "versions": {
+            "1": {
+              "fields": {
+                "1": { "name": "label", "type": "string" },
+                "2": { "name": "children", "type": "array", "items": { "ref": "test:Child" }, "optional": true }
+              }
+            }
+          }
+        },
+        "test:Child": {
+          "versions": {
+            "1": {
+              "fields": {
+                "1": { "name": "name", "type": "string" },
+                "2": { "name": "score", "type": "int32" }
+              }
+            }
+          }
+        }
+      },
+      "enums": {}
+    }
+    "#;
+
+    registry
+        .put_bundle("shorthand-ref-test", bundle.as_bytes())
+        .expect("put bundle");
+    let desc = registry
+        .get_type_version("test:Parent", 1)
+        .expect("descriptor");
+
+    // Build msgpack: Parent { label: "grp", children: [Child { name: "a", score: 10 }] }
+    let child_map = vec![
+        (Value::Integer(1.into()), Value::String("a".into())),
+        (Value::Integer(2.into()), Value::Integer(10.into())),
+    ];
+    let root_map = vec![
+        (Value::Integer(1.into()), Value::String("grp".into())),
+        (
+            Value::Integer(2.into()),
+            Value::Array(vec![Value::Map(child_map)]),
+        ),
+    ];
+    let value = Value::Map(root_map);
+
+    let mut buf = Vec::new();
+    rmpv::encode::write_value(&mut buf, &value).expect("encode msgpack");
+
+    let projection = project_msgpack(&buf, desc, &registry, &default_options()).expect("project");
+    let data = projection.data.as_object().expect("data object");
+
+    assert_eq!(data.get("label").unwrap().as_str().unwrap(), "grp");
+
+    let children = data
+        .get("children")
+        .unwrap()
+        .as_array()
+        .expect("children array");
+    assert_eq!(children.len(), 1);
+
+    let child = children[0].as_object().expect("child object");
+    // Must have named keys, not numeric string keys
+    assert_eq!(child.get("name").unwrap().as_str().unwrap(), "a");
+    assert_eq!(child.get("score").unwrap().as_i64().unwrap(), 10);
+    assert!(
+        child.get("1").is_none(),
+        "numeric key '1' should not appear in shorthand ref array items"
+    );
+}

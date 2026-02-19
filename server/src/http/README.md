@@ -133,7 +133,7 @@ async fn append_turn(
 | `type_hint_mode` | enum | `inherit` | Type resolution mode |
 | `include_unknown` | bool | false | Include unknown fields |
 | `bytes_render` | enum | `base64` | Binary encoding |
-| `u64_format` | enum | `string` | Large int format |
+| `u64_format` | enum | `number` | Large int format |
 
 ## Error Handling
 

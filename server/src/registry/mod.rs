@@ -333,11 +333,12 @@ fn normalize_version(version: u32, def: &TypeVersion) -> Result<TypeVersionSpec>
             .parse()
             .map_err(|_| StoreError::InvalidInput("invalid field tag".into()))?;
 
-        // Parse items spec - can be a simple string or an object with type/ref
+        // Parse items spec - can be a simple string or an object with type/ref.
+        // Supports both long form `{ "type": "ref", "ref": "T" }` and shorthand
+        // `{ "ref": "T" }` (as used in conversation-bundle.json).
         let items = match &field_def.items {
             Some(serde_json::Value::String(s)) => Some(ItemsSpec::Simple(s.clone())),
             Some(serde_json::Value::Object(obj)) => {
-                // Check for { "type": "ref", "ref": "cxdb:SomeType" }
                 if let Some(serde_json::Value::String(t)) = obj.get("type") {
                     if t == "ref" {
                         if let Some(serde_json::Value::String(r)) = obj.get("ref") {
@@ -348,6 +349,9 @@ fn normalize_version(version: u32, def: &TypeVersion) -> Result<TypeVersionSpec>
                     } else {
                         Some(ItemsSpec::Simple(t.clone()))
                     }
+                } else if let Some(serde_json::Value::String(r)) = obj.get("ref") {
+                    // Shorthand: { "ref": "cxdb.ToolCallItem" } without "type"
+                    Some(ItemsSpec::Ref(r.clone()))
                 } else {
                     None
                 }
