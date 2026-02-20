@@ -11,7 +11,7 @@ docker run -d \
   --name cxdb \
   --restart unless-stopped \
   -p 9009:9009 \
-  -p 9010:9010 \
+  -p 9010:80 \
   -v /var/lib/cxdb:/data \
   -e CXDB_DATA_DIR=/data \
   -e CXDB_LOG_LEVEL=info \

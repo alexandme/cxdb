@@ -16,7 +16,7 @@ The fastest way to try CXDB is with the pre-built Docker image:
 
 ```bash
 # Run the server (binary protocol :9009, HTTP :9010)
-docker run -p 9009:9009 -p 9010:9010 -v $(pwd)/data:/data cxdb/cxdb:latest
+docker run -p 9009:9009 -p 9010:80 -v $(pwd)/data:/data cxdb/cxdb:latest
 
 # Create a context and append a turn (HTTP write path)
 curl -X POST http://localhost:9010/v1/contexts/create \
@@ -74,7 +74,7 @@ pnpm build
 docker build -t cxdb:latest .
 
 # Run with persistent storage
-docker run -p 9009:9009 -p 9010:9010 \
+docker run -p 9009:9009 -p 9010:80 \
   -v $(pwd)/data:/data \
   -e CXDB_DATA_DIR=/data \
   cxdb:latest
