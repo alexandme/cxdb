@@ -38,14 +38,14 @@ Run the server:
 docker run -d \
   --name cxdb \
   -p 9009:9009 \
-  -p 9010:9010 \
+  -p 9010:80 \
   -v $(pwd)/data:/data \
   cxdb:latest
 ```
 
 This starts:
 - Binary protocol server on `:9009`
-- HTTP gateway on `:9010`
+- UI and HTTP API on `:9010` (via nginx proxy)
 - Data persisted to `./data`
 
 ### Option B: From Source
